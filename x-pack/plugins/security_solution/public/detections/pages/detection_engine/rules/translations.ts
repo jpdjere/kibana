@@ -1065,13 +1065,16 @@ export const RULES_BULK_EDIT_SUCCESS = i18n.translate(
   }
 );
 
-export const RULES_BULK_EDIT_SUCCESS_DESCRIPTION = (rulesCount: number) =>
+export const RULES_BULK_EDIT_SUCCESS_DESCRIPTION = (
+  succeededRulesCount: number,
+  skippedRulesCount: number
+) =>
   i18n.translate(
     'xpack.securitySolution.detectionEngine.rules.allRules.bulkActions.edit.successToastDescription',
     {
-      values: { rulesCount },
+      values: { succeededRulesCount, skippedRulesCount },
       defaultMessage:
-        "You've successfully updated {rulesCount, plural, =1 {# rule} other {# rules}}",
+        "You've successfully updated {succeededRulesCount, plural, =1 {# rule} other {# rules}}. {skippedRulesCount, plural, =0 {} =1 {# rule was skipped.} other {# rules were skipped.}}",
     }
   );
 

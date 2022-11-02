@@ -70,12 +70,12 @@ export function explainBulkEditSuccess(
         x.type === BulkActionEditType.delete_index_patterns
     )
   ) {
-    return `${i18n.RULES_BULK_EDIT_SUCCESS_DESCRIPTION(summary.succeeded)}. ${
+    return `${i18n.RULES_BULK_EDIT_SUCCESS_DESCRIPTION(summary.succeeded, summary.skipped)}. ${
       i18n.RULES_BULK_EDIT_SUCCESS_INDEX_EDIT_DESCRIPTION
     }`;
   }
 
-  return i18n.RULES_BULK_EDIT_SUCCESS_DESCRIPTION(summary.succeeded);
+  return i18n.RULES_BULK_EDIT_SUCCESS_DESCRIPTION(summary.succeeded, summary.skipped);
 }
 
 export function summarizeBulkError(action: BulkActionType): string {

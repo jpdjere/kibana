@@ -2571,6 +2571,7 @@ export class RulesClient {
             errors.push({
               message: error.message,
               rule: {
+                ...rule.attributes,
                 id: rule.id,
                 name: rule.attributes?.name,
               },
