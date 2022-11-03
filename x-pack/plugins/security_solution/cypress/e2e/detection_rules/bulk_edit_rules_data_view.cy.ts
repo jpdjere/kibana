@@ -87,14 +87,17 @@ describe('Detection rules, bulk edit, data view', () => {
     waitForRulesTableToBeLoaded();
   });
 
-  it('Add index patterns to custom rules with configured data view', () => {
+  it('Add index patterns to custom rules with configured data view: all rules are skipped', () => {
     selectNumberOfRules(expectedNumberOfCustomRulesToBeEdited);
 
     openBulkEditAddIndexPatternsForm();
     typeIndexPatterns(expectedIndexPatterns);
     submitBulkEditForm();
 
-    waitForBulkEditActionToFinish({ rulesCount: expectedNumberOfCustomRulesToBeEdited });
+    waitForBulkEditActionToFinish({
+      skippedCount: expectedNumberOfCustomRulesToBeEdited,
+      showDataViewsWarning: true,
+    });
 
     // check if rule still has data view and index patterns field does not exist
     goToRuleDetails();
@@ -102,7 +105,7 @@ describe('Detection rules, bulk edit, data view', () => {
     assertDetailsNotExist(INDEX_PATTERNS_DETAILS);
   });
 
-  it('Add index patterns to custom rules with configured data view when data view checkbox is checked', () => {
+  it('Add index patterns to custom rules with configured data view when data view checkbox is checked: rules are updated', () => {
     selectNumberOfRules(expectedNumberOfCustomRulesToBeEdited);
 
     openBulkEditAddIndexPatternsForm();
@@ -115,7 +118,7 @@ describe('Detection rules, bulk edit, data view', () => {
 
     submitBulkEditForm();
 
-    waitForBulkEditActionToFinish({ rulesCount: expectedNumberOfCustomRulesToBeEdited });
+    waitForBulkEditActionToFinish({ updatedCount: expectedNumberOfCustomRulesToBeEdited });
 
     // check if rule has been updated with index patterns and data view does not exist
     goToRuleDetails();
@@ -123,7 +126,7 @@ describe('Detection rules, bulk edit, data view', () => {
     assertDetailsNotExist(DATA_VIEW_DETAILS);
   });
 
-  it('Overwrite index patterns in custom rules with configured data view', () => {
+  it('Overwrite index patterns in custom rules with configured data view when overwrite data view checkbox is NOT checked:: rules are skipped', () => {
     selectNumberOfRules(expectedNumberOfCustomRulesToBeEdited);
 
     openBulkEditAddIndexPatternsForm();
@@ -131,7 +134,10 @@ describe('Detection rules, bulk edit, data view', () => {
     checkOverwriteIndexPatternsCheckbox();
     submitBulkEditForm();
 
-    waitForBulkEditActionToFinish({ rulesCount: expectedNumberOfCustomRulesToBeEdited });
+    waitForBulkEditActionToFinish({
+      skippedCount: expectedNumberOfCustomRulesToBeEdited,
+      showDataViewsWarning: true,
+    });
 
     // check if rule still has data view and index patterns field does not exist
     goToRuleDetails();
@@ -139,7 +145,7 @@ describe('Detection rules, bulk edit, data view', () => {
     assertDetailsNotExist(INDEX_PATTERNS_DETAILS);
   });
 
-  it('Overwrite index patterns in custom rules with configured data view when data view checkbox is checked', () => {
+  it('Overwrite index patterns in custom rules with configured data view when overwrite data view checkbox is checked: rules are updated', () => {
     selectNumberOfRules(expectedNumberOfCustomRulesToBeEdited);
 
     openBulkEditAddIndexPatternsForm();
@@ -149,7 +155,7 @@ describe('Detection rules, bulk edit, data view', () => {
 
     submitBulkEditForm();
 
-    waitForBulkEditActionToFinish({ rulesCount: expectedNumberOfCustomRulesToBeEdited });
+    waitForBulkEditActionToFinish({ updatedCount: expectedNumberOfCustomRulesToBeEdited });
 
     // check if rule has been overwritten with index patterns and data view does not exist
     goToRuleDetails();
@@ -157,7 +163,7 @@ describe('Detection rules, bulk edit, data view', () => {
     assertDetailsNotExist(DATA_VIEW_DETAILS);
   });
 
-  it('Delete index patterns in custom rules with configured data view', () => {
+  it('Delete index patterns in custom rules with configured data view: rules are skipped', () => {
     selectNumberOfRules(expectedNumberOfCustomRulesToBeEdited);
 
     openBulkEditDeleteIndexPatternsForm();
@@ -168,10 +174,79 @@ describe('Detection rules, bulk edit, data view', () => {
 
     submitBulkEditForm();
 
-    waitForBulkEditActionToFinish({ rulesCount: expectedNumberOfCustomRulesToBeEdited });
+    waitForBulkEditActionToFinish({
+      skippedCount: expectedNumberOfCustomRulesToBeEdited,
+      showDataViewsWarning: true,
+    });
 
     // check if rule still has data view and index patterns field does not exist
     goToRuleDetails();
     getDetails(DATA_VIEW_DETAILS).contains(DATA_VIEW_ID);
+  });
+});
+
+describe('Detection rules, bulk edit, index pattern and data view', () => {
+  const customRulesNumber = 2;
+  before(() => {
+    cleanKibana();
+    login();
+  });
+  beforeEach(() => {
+    deleteAlertsAndRules();
+    esArchiverResetKibana();
+
+    postDataView(DATA_VIEW_ID);
+
+    createCustomRule({ ...getNewRule(), ...defaultRuleData }, '1');
+    createCustomRule(
+      {
+        ...getNewRule(),
+        dataSource: {
+          type: 'indexPatterns',
+          index: ['test-index-1-*'],
+        },
+      },
+      '2'
+    );
+
+    visitWithoutDateRange(SECURITY_DETECTIONS_RULES_URL);
+
+    waitForRulesTableToBeLoaded();
+  });
+
+  it('Add index patterns to custom rules: one rule is updated, one rule is skipped', () => {
+    selectNumberOfRules(customRulesNumber);
+
+    openBulkEditAddIndexPatternsForm();
+    typeIndexPatterns(expectedIndexPatterns);
+    submitBulkEditForm();
+
+    waitForBulkEditActionToFinish({
+      updatedCount: 1,
+      skippedCount: 1,
+      showDataViewsWarning: true,
+    });
+
+    // check if rule still has data view and index patterns field does not exist
+    goToRuleDetails();
+    getDetails(DATA_VIEW_DETAILS).contains(DATA_VIEW_ID);
+    assertDetailsNotExist(INDEX_PATTERNS_DETAILS);
+  });
+
+  it('Add index patterns to custom rules when overwrite data view checkbox is checked: all rules are updated', () => {
+    selectNumberOfRules(customRulesNumber);
+
+    openBulkEditAddIndexPatternsForm();
+    typeIndexPatterns(expectedIndexPatterns);
+    checkOverwriteDataViewCheckbox();
+    submitBulkEditForm();
+
+    waitForBulkEditActionToFinish({
+      updatedCount: 2,
+    });
+
+    // check if rule still has data view and index patterns field does not exist
+    goToRuleDetails();
+    assertDetailsNotExist(DATA_VIEW_DETAILS);
   });
 });

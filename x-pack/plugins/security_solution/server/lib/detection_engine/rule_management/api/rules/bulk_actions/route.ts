@@ -8,11 +8,20 @@
 import { truncate } from 'lodash';
 import moment from 'moment';
 import { BadRequestError, transformError } from '@kbn/securitysolution-es-utils';
-import type { KibanaResponseFactory, Logger, SavedObjectsClientContract } from '@kbn/core/server';
+import type {
+  IKibanaResponse,
+  KibanaResponseFactory,
+  Logger,
+  SavedObjectsClientContract,
+} from '@kbn/core/server';
 
 import type { RulesClient, BulkOperationError } from '@kbn/alerting-plugin/server';
 import type { SanitizedRule } from '@kbn/alerting-plugin/common';
 import { AbortError } from '@kbn/kibana-utils-plugin/common';
+import type {
+  BulkActionSkipResult,
+  BulkEditActionResults,
+} from '@kbn/alerting-plugin/server/rules_client';
 import type { RuleAlertType, RuleParams } from '../../../../rule_schema';
 
 import type { BulkActionsDryRunErrCode } from '../../../../../../../common/constants';
@@ -26,6 +35,10 @@ import {
   PerformBulkActionRequestBody,
   PerformBulkActionRequestQuery,
 } from '../../../../../../../common/detection_engine/rule_management/api/rules/bulk_actions/request_schema';
+import type {
+  NormalizedRuleError,
+  RuleDetailsInError,
+} from '../../../../../../../common/detection_engine/rule_management/api/rules/bulk_actions/response_schema';
 import type { SetupPlugins } from '../../../../../../plugin';
 import type { SecuritySolutionPluginRouter } from '../../../../../../types';
 import { buildRouteValidation } from '../../../../../../utils/build_validation/route_validation';
@@ -56,21 +69,26 @@ const MAX_RULES_TO_PROCESS_TOTAL = 10000;
 const MAX_ERROR_MESSAGE_LENGTH = 1000;
 const MAX_ROUTE_CONCURRENCY = 5;
 
-interface RuleDetailsInError {
-  id: string;
-  name?: string;
-}
-interface NormalizedRuleError {
-  message: string;
-  status_code: number;
-  err_code?: BulkActionsDryRunErrCode;
-  rules: RuleDetailsInError[];
-}
-
-type BulkActionError =
+export type BulkActionError =
   | PromisePoolError<string>
   | PromisePoolError<RuleAlertType>
   | BulkOperationError;
+
+export interface BulkEditActionSummary {
+  failed: number;
+  skipped: number;
+  succeeded: number;
+  total: number;
+}
+export interface BulkEditActionResponse {
+  success?: boolean;
+  rules_count?: number;
+  attributes: {
+    results: BulkEditActionResults;
+    summary: BulkEditActionSummary;
+    errors?: NormalizedRuleError[];
+  };
+}
 
 const normalizeErrorResponse = (errors: BulkActionError[]): NormalizedRuleError[] => {
   const errorsMap = new Map<string, NormalizedRuleError>();
@@ -116,14 +134,6 @@ const normalizeErrorResponse = (errors: BulkActionError[]): NormalizedRuleError[
   return Array.from(errorsMap, ([_, normalizedError]) => normalizedError);
 };
 
-function isBulkEditError(error: BulkActionError | BulkEditError): error is BulkEditError {
-  return (error as BulkEditError).message !== undefined;
-}
-
-export enum BulkEditSkipReason {
-  DataViewExistsAndNotOverriden = 'DataViewExistsAndNotOverriden',
-}
-
 const buildBulkResponse = (
   response: KibanaResponseFactory,
   {
@@ -132,31 +142,25 @@ const buildBulkResponse = (
     updated = [],
     created = [],
     deleted = [],
+    skipped = [],
   }: {
     isDryRun?: boolean;
-    errors?: BulkActionError[] | BulkEditError[];
+    errors?: BulkActionError[];
     updated?: RuleAlertType[];
     created?: RuleAlertType[];
     deleted?: RuleAlertType[];
+    skipped?: BulkActionSkipResult[];
   }
-) => {
-  const skipped = (
-    errors.filter((error) => {
-      if (isBulkEditError(error)) {
-        return Object.values(BulkEditSkipReason).includes(error.message as BulkEditSkipReason);
-      }
-      return false;
-    }) as BulkEditError[]
-  ).map(({ rule }) => rule) as RuleAlertType[];
-
+): IKibanaResponse<BulkEditActionResponse> => {
   const numSucceeded = updated.length + created.length + deleted.length;
   const numSkipped = skipped.length;
-  const numFailed = errors.length - numSkipped;
+  const numFailed = errors.length;
+
   const summary = {
     failed: numFailed,
     succeeded: numSucceeded,
     skipped: numSkipped,
-    total: numSucceeded + numFailed + numFailed + numSkipped,
+    total: numSucceeded + numFailed + numSkipped,
   };
 
   // if response is for dry_run, empty lists of rules returned, as rules are not actually updated and stored within ES
@@ -172,7 +176,7 @@ const buildBulkResponse = (
         updated: updated.map((rule) => internalRuleToAPIResponse(rule)),
         created: created.map((rule) => internalRuleToAPIResponse(rule)),
         deleted: deleted.map((rule) => internalRuleToAPIResponse(rule)),
-        skipped: skipped.map((rule) => internalRuleToAPIResponse(rule)),
+        skipped,
       };
 
   if (numFailed > 0) {
@@ -361,7 +365,7 @@ export const performBulkActionRoute = (
         // handling this action before switch statement as bulkEditRules fetch rules within
         // rulesClient method, hence there is no need to use fetchRulesByQueryOrIds utility
         if (body.action === BulkActionType.edit && !isDryRun) {
-          const { rules, errors } = await bulkEditRules({
+          const { rules, errors, skipped } = await bulkEditRules({
             rulesClient,
             filter: query,
             ids: body.ids,
@@ -392,6 +396,7 @@ export const performBulkActionRoute = (
             updated: migrationOutcome.results
               .filter(({ result }) => result)
               .map(({ result }) => result),
+            skipped,
             errors: [...errors, ...migrationOutcome.errors],
           });
         }

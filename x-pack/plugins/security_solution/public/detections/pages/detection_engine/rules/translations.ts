@@ -1073,12 +1073,13 @@ export const RULES_BULK_EDIT_SUCCESS_DESCRIPTION = (
     'xpack.securitySolution.detectionEngine.rules.allRules.bulkActions.edit.successToastDescription',
     {
       values: { succeededRulesCount, skippedRulesCount },
-      defaultMessage:
-        "You've successfully updated {succeededRulesCount, plural, =1 {# rule} other {# rules}}. {skippedRulesCount, plural, =0 {} =1 {# rule was skipped.} other {# rules were skipped.}}",
+      defaultMessage: `{succeededRulesCount, plural, =0 {} =1 {You've successfully updated # rule. } other {You've successfully updated # rules. }}
+        {skippedRulesCount, plural, =0 {} =1 { # rule was skipped.} other { # rules were skipped.}}
+        `,
     }
   );
 
-export const RULES_BULK_EDIT_SUCCESS_INDEX_EDIT_DESCRIPTION = i18n.translate(
+export const RULES_BULK_EDIT_SUCCESS_DATA_VIEW_RULES_SKIPPED_DETAIL = i18n.translate(
   'xpack.securitySolution.detectionEngine.rules.allRules.bulkActions.edit.successIndexEditToastDescription',
   {
     defaultMessage:
@@ -1093,12 +1094,16 @@ export const RULES_BULK_EDIT_FAILURE = i18n.translate(
   }
 );
 
-export const RULES_BULK_EDIT_FAILURE_DESCRIPTION = (rulesCount: number) =>
+export const RULES_BULK_EDIT_FAILURE_DESCRIPTION = (
+  failedRulesCount: number,
+  skippedRulesCount: number
+) =>
   i18n.translate(
     'xpack.securitySolution.detectionEngine.rules.allRules.bulkActions.edit.errorToastDescription',
     {
-      values: { rulesCount },
-      defaultMessage: '{rulesCount, plural, =1 {# rule} other {# rules}} failed to update.',
+      values: { failedRulesCount, skippedRulesCount },
+      defaultMessage:
+        '{failedRulesCount, plural, =0 {} =1 {# rule} other {# rules}} failed to update. {skippedRulesCount, plural, =0 {} =1 { # rule was skipped.} other { # rules were skipped.}}',
     }
   );
 

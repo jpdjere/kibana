@@ -198,7 +198,7 @@ export interface BulkActionResult {
   updated: Rule[];
   created: Rule[];
   deleted: Rule[];
-  skipped?: Rule[];
+  skipped: Rule[];
 }
 
 export interface BulkActionAggregatedError {
