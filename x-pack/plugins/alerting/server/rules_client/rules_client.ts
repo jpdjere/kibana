@@ -2409,7 +2409,14 @@ export class RulesClient {
         }
       );
     }
-    const { result, apiKeysToInvalidate } = await this.saveBulkUpdatedRules(rules, apiKeysMap);
+
+    const { result, apiKeysToInvalidate } =
+      rules.length > 0
+        ? await this.saveBulkUpdatedRules(rules, apiKeysMap)
+        : {
+            result: { saved_objects: [] },
+            apiKeysToInvalidate: [],
+          };
 
     return {
       apiKeysToInvalidate,
