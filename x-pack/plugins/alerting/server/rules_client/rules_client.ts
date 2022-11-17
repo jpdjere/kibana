@@ -2584,7 +2584,7 @@ export class RulesClient {
       // the `isAttributesUpdateSkipped` flag to false.
       switch (operation.field) {
         case 'actions': {
-          await this.validateActions(ruleType, operation.value);
+          await this.validateActions(ruleType, { actions: ruleActions.actions });
 
           const { modifiedAttributes, isAttributeModified } = applyBulkEditOperation(
             operation,
@@ -2921,7 +2921,10 @@ export class RulesClient {
     username: string | null
   ) {
     // get notifyWhen
-    const notifyWhen = getRuleNotifyWhenType(attributes.notifyWhen, attributes.throttle ?? null);
+    const notifyWhen = getRuleNotifyWhenType(
+      attributes.notifyWhen ?? null,
+      attributes.throttle ?? null
+    );
 
     const updatedAttributes = this.updateMeta({
       ...attributes,
