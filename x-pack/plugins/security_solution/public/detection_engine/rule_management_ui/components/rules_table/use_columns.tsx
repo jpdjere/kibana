@@ -172,6 +172,40 @@ const useRuleExecutionStatusColumn = ({
   );
 };
 
+const useRuleExecutionDateColumn = ({
+  width,
+  truncateText,
+}: {
+  truncateText: boolean;
+  width: string;
+}): TableColumn => {
+  return useMemo(
+    () => ({
+      // name: i18n.COLUMN_LAST_COMPLETE_RUN,
+      name: `execution_summary.last_execution.date`,
+      render: (record: Rule) => {
+        return record.execution_summary == null ? (
+          getEmptyTagValue()
+        ) : (
+          <FormattedRelativePreferenceDate
+            tooltipFieldName={i18n.COLUMN_LAST_COMPLETE_RUN}
+            relativeThresholdInHrs={DEFAULT_RELATIVE_DATE_THRESHOLD}
+            value={record.execution_summary?.last_execution.date}
+            tooltipAnchorClassName="eui-textTruncate"
+          />
+        );
+      },
+      sortable: (item: Rule) =>
+        item.execution_summary
+          ? new Date(item.execution_summary?.last_execution.date).getTime()
+          : -1,
+      truncateText,
+      width,
+    }),
+    [truncateText, width]
+  );
+};
+
 const TAGS_COLUMN: TableColumn = {
   field: 'tags',
   name: null,
@@ -249,6 +283,11 @@ export const useRulesColumns = ({
     mlJobs,
   });
 
+  const executionDateColumn = useRuleExecutionDateColumn({
+    truncateText: true,
+    width: '16%',
+  });
+
   return useMemo(
     () => [
       ruleNameColumn,
@@ -274,25 +313,7 @@ export const useRulesColumns = ({
         truncateText: true,
         width: '12%',
       },
-      {
-        field: 'execution_summary.last_execution.date',
-        name: i18n.COLUMN_LAST_COMPLETE_RUN,
-        render: (value: RuleExecutionSummary['last_execution']['date'] | undefined) => {
-          return value == null ? (
-            getEmptyTagValue()
-          ) : (
-            <FormattedRelativePreferenceDate
-              tooltipFieldName={i18n.COLUMN_LAST_COMPLETE_RUN}
-              relativeThresholdInHrs={DEFAULT_RELATIVE_DATE_THRESHOLD}
-              value={value}
-              tooltipAnchorClassName="eui-textTruncate"
-            />
-          );
-        },
-        sortable: true,
-        truncateText: true,
-        width: '16%',
-      },
+      executionDateColumn,
       executionStatusColumn,
       {
         field: 'updated_at',
@@ -319,6 +340,7 @@ export const useRulesColumns = ({
     [
       actionsColumn,
       enabledColumn,
+      executionDateColumn,
       executionStatusColumn,
       hasCRUDPermissions,
       ruleNameColumn,
@@ -344,6 +366,12 @@ export const useMonitoringColumns = ({
     mlJobs,
     startMlJobs,
   });
+
+  const executionDateColumn = useRuleExecutionDateColumn({
+    truncateText: true,
+    width: '16%',
+  });
+
   const executionStatusColumn = useRuleExecutionStatusColumn({
     sortable: true,
     width: '12%',
@@ -434,25 +462,7 @@ export const useMonitoringColumns = ({
         width: '14%',
       },
       executionStatusColumn,
-      {
-        field: 'execution_summary.last_execution.date',
-        name: i18n.COLUMN_LAST_COMPLETE_RUN,
-        render: (value: RuleExecutionSummary['last_execution']['date'] | undefined) => {
-          return value == null ? (
-            getEmptyTagValue()
-          ) : (
-            <FormattedRelativePreferenceDate
-              tooltipFieldName={i18n.COLUMN_LAST_COMPLETE_RUN}
-              relativeThresholdInHrs={DEFAULT_RELATIVE_DATE_THRESHOLD}
-              value={value}
-              tooltipAnchorClassName="eui-textTruncate"
-            />
-          );
-        },
-        sortable: true,
-        truncateText: true,
-        width: '16%',
-      },
+      executionDateColumn,
       enabledColumn,
       ...(hasCRUDPermissions ? [actionsColumn] : []),
     ],
@@ -460,6 +470,7 @@ export const useMonitoringColumns = ({
       actionsColumn,
       docLinks.links.siem.troubleshootGaps,
       enabledColumn,
+      executionDateColumn,
       executionStatusColumn,
       hasCRUDPermissions,
       ruleNameColumn,
