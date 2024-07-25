@@ -88,6 +88,7 @@ import {
   PerformBulkActionRequestQueryInput,
   PerformBulkActionRequestBodyInput,
 } from '@kbn/security-solution-plugin/common/api/detection_engine/rule_management/bulk_actions/bulk_actions_route.gen';
+import { PerformRuleUpgradeRequestBodyInput } from '@kbn/security-solution-plugin/common/api/detection_engine/prebuilt_rules/perform_rule_upgrade/perform_rule_upgrade_route.gen';
 import { PersistFavoriteRouteRequestBodyInput } from '@kbn/security-solution-plugin/common/api/timeline/persist_favorite/persist_favorite_route.gen';
 import { PersistNoteRouteRequestBodyInput } from '@kbn/security-solution-plugin/common/api/timeline/persist_note/persist_note_route.gen';
 import { PersistPinnedEventRouteRequestBodyInput } from '@kbn/security-solution-plugin/common/api/timeline/pinned_events/pinned_events_route.gen';
@@ -686,6 +687,17 @@ detection engine rules.
         .send(props.body as object)
         .query(props.query);
     },
+    /**
+     * Upgrade prebuilt detection rules.
+     */
+    performRuleUpgrade(props: PerformRuleUpgradeProps) {
+      return supertest
+        .post('/api/detection_engine/rules/prebuilt/_perform_upgrade')
+        .set('kbn-xsrf', 'true')
+        .set(ELASTIC_HTTP_VERSION_HEADER, '2023-10-31')
+        .set(X_ELASTIC_INTERNAL_ORIGIN_REQUEST, 'kibana')
+        .send(props.body as object);
+    },
     persistFavoriteRoute(props: PersistFavoriteRouteProps) {
       return supertest
         .patch('/api/timeline/_favorite')
@@ -994,6 +1006,9 @@ export interface PatchTimelineProps {
 export interface PerformBulkActionProps {
   query: PerformBulkActionRequestQueryInput;
   body: PerformBulkActionRequestBodyInput;
+}
+export interface PerformRuleUpgradeProps {
+  body: PerformRuleUpgradeRequestBodyInput;
 }
 export interface PersistFavoriteRouteProps {
   body: PersistFavoriteRouteRequestBodyInput;
