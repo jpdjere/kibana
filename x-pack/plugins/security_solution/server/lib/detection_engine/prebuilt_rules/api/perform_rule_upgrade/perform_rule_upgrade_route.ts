@@ -7,10 +7,12 @@
 
 import { transformError } from '@kbn/securitysolution-es-utils';
 import {
-  PERFORM_RULE_UPGRADE_URL,
   SkipRuleUpgradeReason,
+  RulePickVersionValues,
+} from '../../../../../../common/api/detection_engine/prebuilt_rules/perform_rule_upgrade/perform_rule_upgrade_route.gen';
+import {
+  PERFORM_RULE_UPGRADE_URL,
   PerformRuleUpgradeRequestBody,
-  PickVersionValues,
 } from '../../../../../../common/api/detection_engine/prebuilt_rules';
 import type {
   PerformRuleUpgradeResponseBody,
@@ -63,7 +65,8 @@ export const performRuleUpgradeRoute = (router: SecuritySolutionPluginRouter) =>
           const ruleAssetsClient = createPrebuiltRuleAssetsClient(soClient);
           const ruleObjectsClient = createPrebuiltRuleObjectsClient(rulesClient);
 
-          const { mode, pick_version: globalPickVersion = PickVersionValues.TARGET } = request.body;
+          const { mode, pick_version: globalPickVersion = RulePickVersionValues.TARGET } =
+            request.body;
 
           const fetchErrors: Array<PromisePoolError<{ rule_id: string }>> = [];
           const targetRules: PrebuiltRuleAsset[] = [];
@@ -132,7 +135,7 @@ export const performRuleUpgradeRoute = (router: SecuritySolutionPluginRouter) =>
             const rulePickVersion =
               versionSpecifiersMap?.get(current.rule_id)?.pick_version ?? globalPickVersion;
             switch (rulePickVersion) {
-              case PickVersionValues.BASE:
+              case RulePickVersionValues.BASE:
                 const baseVersion = ruleVersionsMap.get(current.rule_id)?.base;
                 if (baseVersion) {
                   targetRules.push({ ...baseVersion, version: target.version });
@@ -143,10 +146,10 @@ export const performRuleUpgradeRoute = (router: SecuritySolutionPluginRouter) =>
                   });
                 }
                 break;
-              case PickVersionValues.CURRENT:
+              case RulePickVersionValues.CURRENT:
                 targetRules.push({ ...current, version: target.version });
                 break;
-              case PickVersionValues.TARGET:
+              case RulePickVersionValues.TARGET:
                 targetRules.push(target);
                 break;
               default:
