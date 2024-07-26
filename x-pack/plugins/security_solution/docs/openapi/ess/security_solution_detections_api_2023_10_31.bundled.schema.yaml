@@ -6029,6 +6029,7 @@ components:
     SkipRuleUpgradeReason:
       enum:
         - RULE_UP_TO_DATE
+        - RULE_NOT_FOUND
       type: string
     SortOrder:
       enum:
