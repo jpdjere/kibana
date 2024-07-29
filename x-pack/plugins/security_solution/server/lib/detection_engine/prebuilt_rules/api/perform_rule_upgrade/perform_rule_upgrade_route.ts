@@ -6,21 +6,19 @@
  */
 
 import { transformError } from '@kbn/securitysolution-es-utils';
-import {
-  SkipRuleUpgradeReason,
-  RulePickVersionValues,
+import { buildRouteValidationWithZod } from '@kbn/zod-helpers';
+import type {
+  SkippedRuleUpgrade,
+  PerformRuleUpgradeResponseBody,
 } from '../../../../../../common/api/detection_engine/prebuilt_rules/perform_rule_upgrade/perform_rule_upgrade_route.gen';
 import {
-  PERFORM_RULE_UPGRADE_URL,
+  RulePickVersionValuesEnum,
+  SkipRuleUpgradeReasonEnum,
   PerformRuleUpgradeRequestBody,
-} from '../../../../../../common/api/detection_engine/prebuilt_rules';
-import type {
-  PerformRuleUpgradeResponseBody,
-  SkippedRuleUpgrade,
-} from '../../../../../../common/api/detection_engine/prebuilt_rules';
+} from '../../../../../../common/api/detection_engine/prebuilt_rules/perform_rule_upgrade/perform_rule_upgrade_route.gen';
+import { PERFORM_RULE_UPGRADE_URL } from '../../../../../../common/api/detection_engine/prebuilt_rules';
 import { assertUnreachable } from '../../../../../../common/utility_types';
 import type { SecuritySolutionPluginRouter } from '../../../../../types';
-import { buildRouteValidation } from '../../../../../utils/build_validation/route_validation';
 import type { PromisePoolError } from '../../../../../utils/promise_pool';
 import { buildSiemResponse } from '../../../routes/utils';
 import { aggregatePrebuiltRuleErrors } from '../../logic/aggregate_prebuilt_rule_errors';
@@ -50,7 +48,7 @@ export const performRuleUpgradeRoute = (router: SecuritySolutionPluginRouter) =>
         version: '1',
         validate: {
           request: {
-            body: buildRouteValidation(PerformRuleUpgradeRequestBody),
+            body: buildRouteValidationWithZod(PerformRuleUpgradeRequestBody),
           },
         },
       },
@@ -65,7 +63,7 @@ export const performRuleUpgradeRoute = (router: SecuritySolutionPluginRouter) =>
           const ruleAssetsClient = createPrebuiltRuleAssetsClient(soClient);
           const ruleObjectsClient = createPrebuiltRuleObjectsClient(rulesClient);
 
-          const { mode, pick_version: globalPickVersion = RulePickVersionValues.TARGET } =
+          const { mode, pick_version: globalPickVersion = RulePickVersionValuesEnum.TARGET } =
             request.body;
 
           const fetchErrors: Array<PromisePoolError<{ rule_id: string }>> = [];
@@ -108,7 +106,7 @@ export const performRuleUpgradeRoute = (router: SecuritySolutionPluginRouter) =>
               if (!upgradeableRuleIds.has(rule.rule_id)) {
                 skippedRules.push({
                   rule_id: rule.rule_id,
-                  reason: SkipRuleUpgradeReason.RULE_UP_TO_DATE,
+                  reason: SkipRuleUpgradeReasonEnum.RULE_UP_TO_DATE,
                 });
                 return;
               }
@@ -135,7 +133,7 @@ export const performRuleUpgradeRoute = (router: SecuritySolutionPluginRouter) =>
             const rulePickVersion =
               versionSpecifiersMap?.get(current.rule_id)?.pick_version ?? globalPickVersion;
             switch (rulePickVersion) {
-              case RulePickVersionValues.BASE:
+              case RulePickVersionValuesEnum.BASE:
                 const baseVersion = ruleVersionsMap.get(current.rule_id)?.base;
                 if (baseVersion) {
                   targetRules.push({ ...baseVersion, version: target.version });
@@ -146,11 +144,14 @@ export const performRuleUpgradeRoute = (router: SecuritySolutionPluginRouter) =>
                   });
                 }
                 break;
-              case RulePickVersionValues.CURRENT:
+              case RulePickVersionValuesEnum.CURRENT:
                 targetRules.push({ ...current, version: target.version });
                 break;
-              case RulePickVersionValues.TARGET:
+              case RulePickVersionValuesEnum.TARGET:
                 targetRules.push(target);
+                break;
+              case RulePickVersionValuesEnum.MERGED:
+                // TODO: Implement
                 break;
               default:
                 assertUnreachable(rulePickVersion);
